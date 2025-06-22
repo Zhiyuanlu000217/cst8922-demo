@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeapp-deployment
+  labels:
+    app: nodeapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodeapp
+  template:
+    metadata:
+      labels:
+        app: nodeapp
+    spec:
+      containers:
+        - name: nodeapp
+          image: zeelu1/cst8922-demo:latest # <-- CI/CD will replace this with your image
+          ports:
+            - containerPort: 3000
+          # livenessProbe: # <-- Add liveness probe here
+          # readinessProbe: # <-- Add readiness probe here
+          # resources: # <-- Add resource requests and limits here
+          #   requests:
+          #     memory: "128Mi"
+          #     cpu: "250m"
+          #   limits:
+          #     memory: "256Mi"
+          #     cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodeapp-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: nodeapp
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
