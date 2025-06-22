@@ -16,12 +16,12 @@ spec:
     spec:
       containers:
         - name: nodeapp
-          image: zeelu1/cst8922-demo:latest # <-- CI/CD will replace this with your image
+          image: zeelu1/cst8922-demo:latest 
           ports:
             - containerPort: 3000
-          # livenessProbe: # <-- Add liveness probe here
-          # readinessProbe: # <-- Add readiness probe here
-          # resources: # <-- Add resource requests and limits here
+          # livenessProbe: 
+          # readinessProbe: 
+          # resources: 
           #   requests:
           #     memory: "128Mi"
           #     cpu: "250m"
