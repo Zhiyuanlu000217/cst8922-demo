@@ -209,3 +209,5 @@ This should include:
    - It should target the pods created by the Deployment on port 3000.
    - The service should also expose port 80 externally, mapping to container port 3000.
 ```
+
+Now we have all those files, we can try to make change to the text in our static web app
