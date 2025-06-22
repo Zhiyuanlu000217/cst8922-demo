@@ -173,19 +173,20 @@ The `build-and-push-image` job should:
 - Checkout the code.
 - Set up Node.js 18.x.
 - Install application dependencies from `package.json`.
-- Define an environment variable `DOCKER_IMAGE_REPO` at the workflow level. This variable should automatically combine the `secrets.DOCKER_USERNAME` with the current GitHub repository's name (which is `github.event.repository.name`). For example, if your Docker Hub username is `myuser` and your GitHub repository is `my-awesome-app`, the `DOCKER_IMAGE_REPO` should resolve to `myuser/my-awesome-app`.
+- Define an environment variable `DOCKER_IMAGE_REPO` at the workflow level. This variable should automatically combine the `secrets.DOCKER_USERNAME` with the current GitHub repository's name (`github.event.repository.name`). For example, if your Docker Hub username is `myuser` and your GitHub repository is `my-awesome-app`, the `DOCKER_IMAGE_REPO` should resolve to `myuser/my-awesome-app`.
 - Log in to Docker Hub using GitHub Secrets for `DOCKER_USERNAME` and `DOCKER_PASSWORD`.
-- Build a Docker image using the Dockerfile in the root directory. Use the dynamically generated `DOCKER_IMAGE_REPO` variable for the image name, tagged with the GitHub run number and 'latest'.
+- Build a Docker image using the Dockerfile in the root directory. **Ensure the build command specifies `--platform linux/amd64` for AKS compatibility.** Use the dynamically generated `DOCKER_IMAGE_REPO` variable for the image name, tagged with the GitHub run number and 'latest'.
 - Push the Docker image to Docker Hub, again using the `DOCKER_IMAGE_REPO` variable and both tags.
-- Export the `github.run_number` as an environment variable `IMAGE_TAG` for the next job.
+- Export the `github.run_number` as an environment variable `IMAGE_TAG`. **This `IMAGE_TAG` must be defined as an output of the `build-and-push-image` job** so it can be accessed by the `deploy-to-aks` job.
 
 The `deploy-to-aks` job should:
 - Depend on `build-and-push-image`.
 - Run on `ubuntu-latest`.
 - Checkout the code.
-- Use a GitHub Secret named `KUBE_CONFIG_DATA` to set up the `kubectl` context for direct connection to the AKS cluster.
-- Update the image tag in the Kubernetes deployment manifest located at `kubernetes/deployment.yaml`. It should use the `DOCKER_IMAGE_REPO` variable and the `IMAGE_TAG` exported from the previous job. Ensure the `sed` command correctly substitutes the full image name including the variable.
-- Apply the Kubernetes deployment and service manifests (`kubernetes/deployment.yaml` and `kubernetes/service.yaml`).
+- Set up `kubectl` using `azure/setup-kubectl@v4`.
+- Set up the Kubeconfig: **Create the `$HOME/.kube` directory if it doesn't exist (`mkdir -p $HOME/.kube`),** then decode the `KUBE_CONFIG_DATA` secret into `$HOME/.kube/config`, and **set file permissions to `chmod 600 $HOME/.kube/config`**.
+- Update the image tag in the Kubernetes deployment manifest located at `kubernetes/deployment.yaml`. It should use the `DOCKER_IMAGE_REPO` variable and the `IMAGE_TAG` exported as an output from the previous job. Ensure the `sed` command correctly substitutes the full image name, addressing any potential issues with comments on the image line.
+- Apply the Kubernetes manifests. **Only `kubernetes/deployment.yaml` needs to be applied, as it contains both the Deployment and Service resources (separated by `---`).**
 ```
 
 ### Create k8s config files
