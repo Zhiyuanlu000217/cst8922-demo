@@ -50,14 +50,19 @@ jobs:
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
+        # Add a specific version if 'latest' causes issues in the future, e.g., with: version: '1.28.0'
 
-      - name: Set up kubeconfig
+      - name: Set up Kubeconfig
         run: |
+          mkdir -p $HOME/.kube # This line creates the .kube directory if it doesn't exist
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config # Ensure correct permissions for security
 
       - name: Update image tag in deployment manifest
+        # Ensure the sed command's regex correctly matches your image line.
+        # The current sed assumes 'image:' is at the beginning of the line or only matched once.
         run: |
-          sed -i "s|image:.*|image: $DOCKER_IMAGE_REPO:${IMAGE_TAG}|" kubernetes/deployment.yaml
+          sed -i "s|image:.*$|image: ${{ env.DOCKER_IMAGE_REPO }}:${{ needs.build-and-push-image.outputs.image_tag }}|" kubernetes/deployment.yaml
 
       - name: Apply Kubernetes manifests
         run: |
