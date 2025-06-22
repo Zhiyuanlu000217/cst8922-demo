@@ -1,0 +1,15 @@
+{
+  "name": "devops-demo-app",
+  "version": "1.0.0",
+  "description": "A minimal Node.js Express web application for DevOps demo",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": ["devops", "demo", "express", "nodejs"],
+  "author": "AI-Augmented DevOps Demo",
+  "license": "MIT"
+} 
