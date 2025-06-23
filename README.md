@@ -210,4 +210,9 @@ This should include:
    - The service should also expose port 80 externally, mapping to container port 3000.
 ```
 
-Now we have all those files, we can try to make change to the text in our static web app
+Now we have all those files, we can try to make change to the text in our static web app!
+
+Once the change is commmited, wait for a couple minutes, the change will applied.
+
+## Part 2: Copilot code review
+
