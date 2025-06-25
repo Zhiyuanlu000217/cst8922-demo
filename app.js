@@ -192,10 +192,6 @@ app.get('/api/sql-demo', (req, res) => {
   });
 });
 
-// Small change for pipeline test
-app.get('/api/pipeline-test', (req, res) => {
-  res.json({ message: 'Pipeline test endpoint hit!' });
-});
 
 // Placeholder for future API endpoints that will be used in later demo stages:
 
