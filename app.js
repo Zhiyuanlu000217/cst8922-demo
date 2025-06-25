@@ -133,6 +133,20 @@ app.post('/api/login/vulnerable', (req, res) => {
   }
 });
 
+// The following code is intentionally vulnerable for pipeline testing
+app.get('/api/test/vulnerable', (req, res) => {
+  // Intentionally vulnerable code to trigger pipeline vulnerability alert
+  const userInput = req.query.input;
+  const sql = "SELECT * FROM users WHERE username = '" + userInput + "'";
+  // Simulate execution (do not use in production!)
+  console.log('VULNERABLE SQL:', sql);
+  
+  res.json({
+    message: 'This is an intentionally vulnerable endpoint for testing',
+    sql: sql
+  });
+});
+
 // SECURE: Placeholder for secure endpoint (to be implemented later)
 app.get('/api/users/secure', (req, res) => {
   res.json({
