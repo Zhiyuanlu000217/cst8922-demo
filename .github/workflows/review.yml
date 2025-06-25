@@ -4,7 +4,7 @@ name: AI Code Review for Changed Code (Inline)
 on:
   push:
     branches:
-      - anti-pattern-example
+      - anti_pattern_example
 
 permissions:
   contents: read
