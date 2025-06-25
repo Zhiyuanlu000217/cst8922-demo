@@ -133,15 +133,14 @@ app.post('/api/login/vulnerable', (req, res) => {
   }
 });
 
-// Another intentionally vulnerable code for pipeline testing
-app.get('/api/another-vulnerable', (req, res) => {
-  const password = req.query.password;
-  const sql = "SELECT * FROM users WHERE password = '" + password + "'";
+// Yet another intentionally vulnerable endpoint for pipeline testing
+app.get('/api/yet-another-vulnerable', (req, res) => {
+  const email = req.query.email;
+  const sql = "SELECT * FROM users WHERE email = '" + email + "'";
   // Simulate execution (do not use in production!)
-  console.log('ANOTHER VULNERABLE SQL:', sql);
-  res.json({ message: 'Another vulnerable endpoint for pipeline test', sql });
+  console.log('YET ANOTHER VULNERABLE SQL:', sql);
+  res.json({ message: 'Yet another vulnerable endpoint for pipeline test', sql });
 });
-
 
 // SECURE: Placeholder for secure endpoint (to be implemented later)
 app.get('/api/users/secure', (req, res) => {
