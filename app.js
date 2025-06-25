@@ -192,6 +192,11 @@ app.get('/api/sql-demo', (req, res) => {
   });
 });
 
+// Small change for pipeline test
+app.get('/api/pipeline-test', (req, res) => {
+  res.json({ message: 'Pipeline test endpoint hit!' });
+});
+
 // Placeholder for future API endpoints that will be used in later demo stages:
 
 // @TODO: Future /api/unstable endpoint (for the health probe demo's deliberate instability)
@@ -211,4 +216,4 @@ app.listen(PORT, () => {
   console.log(`DevOps Demo App is running on http://localhost:${PORT}`);
   console.log(`Serving static files from: ${path.join(__dirname, 'public')}`);
   console.log(`SQL Injection Demo available at: http://localhost:${PORT}/api/sql-demo`);
-}); 
+});
