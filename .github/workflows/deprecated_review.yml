@@ -25,6 +25,28 @@ jobs:
         run: |
           npm audit --json > audit-results.json || true
 
+      - name: Generate Markdown summary
+        id: summary
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('audit-results.json', 'utf8'));
+          let md = `# :warning: Deprecated or Vulnerable Dependencies Detected\n\n`;
+          if (data.metadata && data.metadata.vulnerabilities) {
+            md += `| Type | Count |\n|------|-------|\n`;
+            for (const [type, count] of Object.entries(data.metadata.vulnerabilities)) {
+              md += `| ${type} | ${count} |\n`;
+            }
+          }
+          if (data.advisories && Object.keys(data.advisories).length > 0) {
+            md += `\n## Advisories\n`;
+            for (const [id, adv] of Object.entries(data.advisories)) {
+              md += `- **${adv.module_name}**: [${adv.title}](${adv.url}) (Severity: ${adv.severity})\n`;
+            }
+          }
+          fs.writeFileSync('audit-summary.md', md);
+          EOF
+
       - name: Check for vulnerabilities
         id: check_vuln
         run: |
@@ -32,8 +54,14 @@ jobs:
 
       - name: Create issue if vulnerabilities found
         if: failure() && steps.check_vuln.outcome == 'failure'
+        id: create_issue
         uses: peter-evans/create-issue-from-file@v5
         with:
           title: 'Deprecated or Vulnerable Dependencies Detected'
-          content-filepath: audit-results.json
+          content-filepath: audit-summary.md
           labels: 'dependencies,security,automated'
+
+      - name: Show created issue link
+        if: steps.create_issue.outputs.issue-number
+        run: |
+          echo "::notice::Created issue: https://github.com/${{ github.repository }}/issues/${{ steps.create_issue.outputs.issue-number }}"
