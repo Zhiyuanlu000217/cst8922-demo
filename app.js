@@ -134,12 +134,12 @@ app.post('/api/login/vulnerable', (req, res) => {
 });
 
 // Yet another intentionally vulnerable endpoint for pipeline testing
-app.get('/api/yet-another-vulnerable', (req, res) => {
-  const email = req.query.email;
-  const sql = "SELECT * FROM users WHERE email = '" + email + "'";
-  // Simulate execution (do not use in production!)
-  console.log('YET ANOTHER VULNERABLE SQL:', sql);
-  res.json({ message: 'Yet another vulnerable endpoint for pipeline test', sql });
+app.get('/api/users/find', (req, res) => {
+  const userId = req.query.id;
+  // VULNERABLE: Direct concatenation of user input
+  const sql = "SELECT username, email FROM users WHERE id = '" + userId + "'";
+  console.log('VULNERABLE SQL 1:', sql);
+  res.json({ message: 'User lookup (VULNERABLE)', sql: sql });
 });
 
 // SECURE: Placeholder for secure endpoint (to be implemented later)

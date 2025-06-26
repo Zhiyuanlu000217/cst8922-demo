@@ -85,7 +85,9 @@ jobs:
 
           # --- THIS IS THE CRUCIAL CHANGE ---
           # Write the ISSUE_BODY to a temporary file
-          echo "$ISSUE_BODY" > /tmp/github_issue_body.md
+          cat <<EOF > /tmp/github_issue_body.md
+          $ISSUE_BODY
+          EOF
 
           # Create the issue, reading the body from the temporary file
           gh issue create \
