@@ -5,7 +5,7 @@ const app = express();
 const PORT = 3000;
 
 // Health check endpoint for Kubernetes liveness/readiness probes
-app.get('/', (req, res) => {
+app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
