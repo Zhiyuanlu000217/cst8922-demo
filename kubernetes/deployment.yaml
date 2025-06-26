@@ -5,7 +5,7 @@ metadata:
   labels:
     app: nodeapp
 spec:
-  replicas: 1
+  replicas: 3 # Increased for high availability
   selector:
     matchLabels:
       app: nodeapp
@@ -19,15 +19,29 @@ spec:
           image: zeelu1/cst8922-demo:latest 
           ports:
             - containerPort: 3000
-          # livenessProbe: 
-          # readinessProbe: 
-          # resources: 
-          #   requests:
-          #     memory: "128Mi"
-          #     cpu: "250m"
-          #   limits:
-          #     memory: "256Mi"
-          #     cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service

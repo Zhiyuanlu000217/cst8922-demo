@@ -4,6 +4,11 @@ const path = require('path');
 const app = express();
 const PORT = 3000;
 
+// Health check endpoint for Kubernetes liveness/readiness probes
+app.get('/', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Configure Express to parse JSON and URL-encoded bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
