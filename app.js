@@ -9,6 +9,11 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+// Serve index.html at the root path '/'
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Configure Express to parse JSON and URL-encoded bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
