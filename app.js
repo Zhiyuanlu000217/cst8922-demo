@@ -13,7 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   // Option 1: Randomly crash the server process
   // This simulates an unrecoverable error that causes the app to exit.
-  if (Math.random() < 0.95) { // 5% chance to crash
+  if (Math.random() < 0.50) { // 5% chance to crash
     console.error('SERVER-WIDE INSTABILITY: Simulating a process crash for all endpoints!');
     // Using process.exit() will terminate the entire Node.js application.
     process.exit(1); // Exit with a non-zero code to indicate an error
@@ -21,7 +21,7 @@ app.use((req, res, next) => {
 
   // Option 2: Randomly introduce a significant delay (block the event loop)
   // This simulates the server becoming unresponsive due to high load or a hung operation.
-  if (Math.random() < 0.70) { // 10% chance to introduce a global delay
+  if (Math.random() < 0.50) { // 10% chance to introduce a global delay
     const blockingDurationMs = Math.random() * 3000 + 1000; // Random delay between 1 to 4 seconds
     console.warn(`SERVER-WIDE INSTABILITY: Simulating a global block for ${blockingDurationMs.toFixed(0)}ms.`);
     const start = Date.now();
