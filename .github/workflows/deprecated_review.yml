@@ -1,0 +1,123 @@
+name: Deprecated Dependency Review
+
+on:
+  push:
+    branches:
+      - deprecate_deps # This workflow triggers on pushes to the 'deprecate_deps' branch
+
+permissions:
+  contents: read
+  issues: write # Necessary for creating GitHub Issues
+
+jobs:
+  audit_dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # Use your desired Node.js version
+
+      - name: Install dependencies
+        run: npm ci # Use npm ci for clean installs in CI environments
+
+      - name: Run npm audit
+        id: npm_audit
+        run: |
+          # Run npm audit and capture output directly to a file.
+          # The '|| true' ensures the step doesn't fail if vulnerabilities are found,
+          # allowing us to parse the output and decide whether to create an issue.
+          npm audit --json > /tmp/npm_audit_output.json || true
+          
+          # Use jq to check if the 'vulnerabilities' object exists and has entries.
+          # This determines if there are actual vulnerabilities to report.
+          VULNERABILITIES_EXIST=$(jq 'if .vulnerabilities | length > 0 then "true" else "false" end' /tmp/npm_audit_output.json)
+          echo "VULNERABILITIES_EXIST=$VULNERABILITIES_EXIST" >> $GITHUB_ENV
+          # Output the audit content to an environment variable for logging later if no issue created.
+          # This needs to be outside the if/else of VULNERABILITIES_EXIST to always be available.
+          AUDIT_OUTPUT=$(cat /tmp/npm_audit_output.json)
+          echo "AUDIT_OUTPUT_CONTENT<<EOF" >> $GITHUB_ENV
+          echo "$AUDIT_OUTPUT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create Issue for Deprecated/Vulnerable Dependencies
+        # CORRECTED: Access env.VULNERABILITIES_EXIST directly in the if condition.
+        if: env.VULNERABILITIES_EXIST == 'true'
+        run: |
+          # Parse the audit output from the file to create a human-readable list of vulnerabilities.
+          AUDIT_REPORT_PRETTY=$(jq -r '
+            .vulnerabilities | to_entries[] | .key as $severity | .value[] | "\
+            ### 📦 \(.name) (Severity: \($severity | ascii_upcase))\n\
+            - **Vulnerability:** \(.title)\n\
+            - **Package:** \(.name)@\(.range)\n\
+            - **Paths:** \(.nodes | join(", "))\n\
+            " + 
+            (if .fixAvailable.name then 
+              "- **Suggested Fix:** Update \(.fixAvailable.name) to \(.fixAvailable.version)" 
+            else 
+              (if .fixAvailable | type == "boolean" and .fixAvailable == false then 
+                 "- **Suggested Fix:** No automatic fix available. Manual review required." 
+               else "" end)
+            end) + "\n" +
+            (if .url then "- **More Info:** \(.url)\n" else "" end) + "\n\n"
+          ' /tmp/npm_audit_output.json) # Read directly from the file
+
+          # Get commit details for the issue body.
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          # --- Construct the full GitHub Issue body using printf commands ---
+          # This approach avoids heredoc pitfalls by writing line-by-line
+          printf "%s\n" "# 🚨 Deprecated/Vulnerable Dependencies Detected" > /tmp/github_issue_body.md
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "An automated review has detected deprecated or vulnerable dependencies in the recent push to the \`deprecate_deps\` branch." >> /tmp/github_issue_body.md
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "---" >> /tmp/github_issue_body.md
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "### ℹ️ Commit Details" >> /tmp/github_issue_body.md
+          printf "%s\n" "- **Commit:** [\`${SHORT_SHA}\`]('${COMMIT_URL}')" >> /tmp/github_issue_body.md
+          printf "%s\n" "- **Full SHA:** \`${{ github.sha }}\`" >> /tmp/github_issue_body.md
+          printf "%s\n" "- **[View Commit on GitHub]('${COMMIT_URL}')**" >> /tmp/github_issue_body.md
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "---" >> /tmp/github_issue_body.md
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "### 🔎 Raw Audit Report" >> /tmp/github_issue_body.md
+          printf "%s\n" "\`\`\`json" >> /tmp/github_issue_body.md
+          
+          # Append the raw JSON audit output directly from the file.
+          jq . /tmp/npm_audit_output.json >> /tmp/github_issue_body.md # Pretty print JSON and append
+          printf "%s\n" "\`\`\`" >> /tmp/github_issue_body.md # Close the JSON code block
+
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "---" >> /tmp/github_issue_body.md
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "### 🚨 Detected Vulnerabilities Summary" >> /tmp/github_issue_body.md
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          
+          # Append the human-readable summary of vulnerabilities.
+          printf "%s\n" "$AUDIT_REPORT_PRETTY" >> /tmp/github_issue_body.md
+
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "---" >> /tmp/github_issue_body.md
+          printf "%s\n" "" >> /tmp/github_issue_body.md
+          printf "%s\n" "> _Please review these dependencies and take appropriate action to update or mitigate them._" >> /tmp/github_issue_body.md
+
+          # Create the GitHub Issue.
+          ISSUE_TITLE="Dependency Vulnerability Alert: ${SHORT_SHA}"
+          gh issue create \
+            --title "$ISSUE_TITLE" \
+            --body-file /tmp/github_issue_body.md \
+            --label "dependency-audit,security,bug"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is automatically provided by GitHub Actions for repo interactions.
+
+      - name: Log if no vulnerabilities found
+        # CORRECTED: Access env.VULNERABILITIES_EXIST directly in the if condition.
+        if: env.VULNERABILITIES_EXIST == 'false'
+        run: |
+          echo "No deprecated or vulnerable dependencies detected by npm audit."
+          echo "Full audit output (for reference):"
+          cat /tmp/npm_audit_output.json # Directly output content from the file
