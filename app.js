@@ -133,13 +133,14 @@ app.post('/api/login/vulnerable', (req, res) => {
   }
 });
 
-// Yet another intentionally vulnerable endpoint for pipeline testing
-app.get('/api/products/search', (req, res) => {
-  const searchTerm = req.query.term;
-  // VULNERABLE: Direct concatenation in LIKE clause
-  const sql = "SELECT name, price FROM products WHERE name LIKE '%" + searchTerm + "%'";
-  console.log('VULNERABLE SQL 2:', sql);
-  res.json({ message: 'Product search (VULNERABLE)', sql: sql });
+// --- VULNERABLE SNIPPET 7: Using Multiple Query Parameters ---
+app.get('/api/reports/filter', (req, res) => {
+  const startDate = req.query.start;
+  const endDate = req.query.end;
+  // VULNERABLE: Multiple concatenations in WHERE clause
+  const sql = "SELECT * FROM reports WHERE date >= '" + startDate + "' AND date <= '" + endDate + "'";
+  console.log('VULNERABLE SQL 7:', sql);
+  res.json({ message: 'Report filter (VULNERABLE)', sql: sql });
 });
 
 
