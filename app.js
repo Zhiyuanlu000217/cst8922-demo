@@ -134,13 +134,14 @@ app.post('/api/login/vulnerable', (req, res) => {
 });
 
 // Yet another intentionally vulnerable endpoint for pipeline testing
-app.get('/api/users/find', (req, res) => {
-  const userId = req.query.id;
-  // VULNERABLE: Direct concatenation of user input
-  const sql = "SELECT username, email FROM users WHERE id = '" + userId + "'";
-  console.log('VULNERABLE SQL 1:', sql);
-  res.json({ message: 'User lookup (VULNERABLE)', sql: sql });
+app.get('/api/products/search', (req, res) => {
+  const searchTerm = req.query.term;
+  // VULNERABLE: Direct concatenation in LIKE clause
+  const sql = "SELECT name, price FROM products WHERE name LIKE '%" + searchTerm + "%'";
+  console.log('VULNERABLE SQL 2:', sql);
+  res.json({ message: 'Product search (VULNERABLE)', sql: sql });
 });
+
 
 // SECURE: Placeholder for secure endpoint (to be implemented later)
 app.get('/api/users/secure', (req, res) => {

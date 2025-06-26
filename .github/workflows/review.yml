@@ -64,6 +64,27 @@ jobs:
 
           echo "AI Review Generated."
 
+      - name: Write AI review content to file
+        if: env.AI_REVIEW_CONTENT != ''
+        run: |
+          printf "%s" "${{ env.AI_REVIEW_CONTENT }}" > /tmp/github_ai_review_content.md
+
+      - name: Write full issue body to file
+        if: env.AI_REVIEW_CONTENT != ''
+        run: |
+          {
+            echo "An automated AI review has detected potential issues in the recent push to the \`anti-pattern-example\` branch."
+            echo
+            echo "**Commit SHA:** \`${{ github.sha }}\`"
+            echo
+            echo "**AI Review Output:**"
+            echo '```'
+            cat /tmp/github_ai_review_content.md
+            echo '```'
+            echo
+            echo "Please review the suggested findings and take appropriate action."
+          } > /tmp/github_issue_body.md
+
       - name: Create GitHub Issue based on AI Review
         if: success() && env.AI_REVIEW_CONTENT != '' && (
               contains(env.AI_REVIEW_CONTENT, 'VULNERABILITY DETECTED:') ||
@@ -75,27 +96,10 @@ jobs:
         run: |
           COMMIT_SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           ISSUE_TITLE="AI Review Alert: Potential Issue in Recent Push (${COMMIT_SHA_SHORT})"
-          
-          # Construct the full issue body including AI review content
-          # Corrected branch name in the message: anti-pattern-example
-          ISSUE_BODY="An automated AI review has detected potential issues in the recent push to the \`anti-pattern-example\` branch.\n\n"
-          ISSUE_BODY+="**Commit SHA:** \`${{ github.sha }}\`\n\n"
-          ISSUE_BODY+="**AI Review Output:**\n\`\`\`\n${{ env.AI_REVIEW_CONTENT }}\n\`\`\`\n\n"
-          ISSUE_BODY+="Please review the suggested findings and take appropriate action."
-
-          # --- THIS IS THE CRUCIAL CHANGE ---
-          # Write the ISSUE_BODY to a temporary file
-          cat <<EOF > /tmp/github_issue_body.md
-          $ISSUE_BODY
-          EOF
-
-          # Create the issue, reading the body from the temporary file
           gh issue create \
             --title "$ISSUE_TITLE" \
             --body-file /tmp/github_issue_body.md \
             --label "ai-review,security,bug"
-          # --- END OF CRUCIAL CHANGE ---
-
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
