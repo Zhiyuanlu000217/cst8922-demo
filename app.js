@@ -133,16 +133,15 @@ app.post('/api/login/vulnerable', (req, res) => {
   }
 });
 
-// --- VULNERABLE SNIPPET 7: Using Multiple Query Parameters ---
-app.get('/api/reports/filter', (req, res) => {
-  const startDate = req.query.start;
-  const endDate = req.query.end;
-  // VULNERABLE: Multiple concatenations in WHERE clause
-  const sql = "SELECT * FROM reports WHERE date >= '" + startDate + "' AND date <= '" + endDate + "'";
-  console.log('VULNERABLE SQL 7:', sql);
-  res.json({ message: 'Report filter (VULNERABLE)', sql: sql });
+// --- VULNERABLE SNIPPET 8: Column Name Injection (simulated) ---
+app.get('/api/data/view', (req, res) => {
+  const columnName = req.query.column;
+  // VULNERABLE: Direct concatenation of column name (can expose other columns)
+  // Example exploit: column=username, password FROM users
+  const sql = "SELECT " + columnName + " FROM sensitive_data LIMIT 1";
+  console.log('VULNERABLE SQL 8:', sql);
+  res.json({ message: 'Data view (VULNERABLE)', sql: sql });
 });
-
 
 // SECURE: Placeholder for secure endpoint (to be implemented later)
 app.get('/api/users/secure', (req, res) => {

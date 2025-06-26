@@ -3,11 +3,11 @@ name: AI Code Review for Changed Code (Inline)
 on:
   push:
     branches:
-      - anti_pattern_example # Make sure this matches your exact branch name (e.g., anti-pattern-example or anti_pattern_example)
+      - anti_pattern_example
 
 permissions:
   contents: read
-  issues: write # Crucial for creating GitHub Issues
+  issues: write
 
 jobs:
   ai-review-and-create-issue:
@@ -16,46 +16,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # Fetch previous commit for diffing
+          fetch-depth: 2
 
       - name: Get changed code diff
         id: get_diff
         run: |
-          # Generate the diff for .js and .html files, excluding node_modules.
-          # We'll use a temporary file to store the diff content securely
-          # and then read it into an environment variable.
-          git diff HEAD~1 HEAD -- "*.js" "*.html" | grep -v 'node_modules' > /tmp/diff_content.txt
+          # Use grep -v to exclude the node_modules directory
+          DIFF_CONTENT=$(git diff HEAD~1 HEAD -- "*.js" "*.html" | grep -v 'node_modules')
           
-          # Read the diff content from the file into a variable.
-          # Using a subshell with cat ensures all lines are captured.
-          DIFF_CONTENT=$(cat /tmp/diff_content.txt)
-
-          # Store multi-line diff content in an environment variable using a delimiter.
-          # This is the standard way for multi-line env vars in GitHub Actions.
+          # Store multi-line diff content in an environment variable
+          # using a delimiter (EOF) to handle newlines correctly
           echo "DIFF_CONTENT<<EOF" >> $GITHUB_ENV
           echo "$DIFF_CONTENT" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Call OpenAI API for Code Review
         id: openai_review
-        # CORRECTED: Use env.DIFF_CONTENT != '' for the if condition.
-        # This correctly checks if the environment variable containing the diff is non-empty.
-        if: env.DIFF_CONTENT != '' 
+        # Only run if there is actual diff content
+        if: env.DIFF_CONTENT != ''
         run: |
           PROMPT="You are an expert software security and quality reviewer. Review the following code changes (Git diff format) for a Node.js application. Focus on: 1. Security vulnerabilities (SQL injection, insecure configurations, exposed secrets, or other common web vulnerabilities). 2. Coding best practices (anti-patterns or significant quality issues). 3. Readability and Maintainability (suggest improvements for clarity). If you find any specific, actionable security vulnerabilities or major quality issues, clearly state them. If a critical security vulnerability (like SQL Injection) or a significant bug is found, start your response with 'VULNERABILITY DETECTED:' or 'MAJOR ISSUE:' followed by a concise description and suggested fix. Otherwise, provide general review comments or confirm if no significant issues are found. Provide concise, actionable feedback. If suggesting a fix, provide code examples if possible. Changed code (Git Diff):"
           
-          # Construct JSON payload for OpenAI API. Pass actual diff as the user content.
+          # Construct JSON payload for OpenAI API
           JSON_PAYLOAD=$(jq -n \
-            --arg system_prompt "$PROMPT" \
-            --arg user_content "${{ env.DIFF_CONTENT }}" \
+            --arg prompt "$PROMPT" \
+            --arg diff "$DIFF_CONTENT" \
             '{
               model: "gpt-4o",
               messages: [
-                { "role": "system", "content": $system_prompt },
-                { "role": "user", "content": $user_content }
-              ],
-              temperature: 0.7,
-              max_tokens: 1500
+                { "role": "system", "content": $prompt },
+                { "role": "user", "content": $diff }
+              ]
             }'
           )
           
@@ -68,66 +59,33 @@ jobs:
 
           # Store multi-line AI review content in an environment variable
           echo "AI_REVIEW_CONTENT<<EOF" >> $GITHUB_ENV
-          echo "$AI_REVIEW" >> $GITHUB_ENV # AI_REVIEW already has markdown formatting, so don't escape $
+          echo "$AI_REVIEW" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
           echo "AI Review Generated."
 
       - name: Write AI review content to file
-        # This step safely writes the AI_REVIEW_CONTENT to a temporary file.
-        # Use printf "%s" which is robust for arbitrary strings, ensuring no shell interpretation.
         if: env.AI_REVIEW_CONTENT != ''
         run: |
           printf "%s" "${{ env.AI_REVIEW_CONTENT }}" > /tmp/github_ai_review_content.md
 
       - name: Write full issue body to file
-        # This step constructs the full Markdown content for the GitHub Issue body.
-        # It includes commit details, the code diff, and the AI review output.
         if: env.AI_REVIEW_CONTENT != ''
         run: |
-          # Construct the full GitHub commit URL
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
-          
-          # Use a heredoc-like syntax to write the multi-line issue body to a file
           {
             echo "An automated AI review has detected potential issues in the recent push to the \`anti-pattern-example\` branch."
             echo
-            echo "---" # Horizontal rule for visual separation
+            echo "**Commit SHA:** \`${{ github.sha }}\`"
             echo
-            echo "### ℹ️ Commit Details"
-            echo "**Commit SHA:** [\`${{ github.sha }}\`](${COMMIT_URL})" # Link to the specific commit on GitHub
-            echo
-            
-            # Conditionally add the diff content if it exists
-            # Use -s /tmp/diff_content.txt to check if the diff file is non-empty. This is valid inside a 'run' block.
-            if [[ -s "/tmp/diff_content.txt" ]]; then
-              echo "### 📄 Changed Code (Git Diff)"
-              echo '```diff' # Use ```diff for GitHub's built-in diff syntax highlighting
-              cat /tmp/diff_content.txt # Read the actual diff content from the file
-              echo '```'
-              echo
-            else
-              echo "No relevant code changes (diff) found for this push."
-              echo
-            fi
-
-            echo "---" # Another horizontal rule for separation
-            echo
-            echo "### 🤖 AI Review Output"
-            # Keep the AI review content within a plain code block (```)
-            # This preserves the AI's intended formatting (e.g., code snippets within the review)
-            # and prevents GitHub's markdown parser from breaking it if the AI output is complex.
-            echo '```' 
-            cat /tmp/github_ai_review_content.md # Read the AI review content from the temporary file
+            echo "**AI Review Output:**"
             echo '```'
-            echo
-            echo "---" # Final horizontal rule
+            cat /tmp/github_ai_review_content.md
+            echo '```'
             echo
             echo "Please review the suggested findings and take appropriate action."
           } > /tmp/github_issue_body.md
 
       - name: Create GitHub Issue based on AI Review
-        # This step creates the GitHub Issue. It now reads the body from the file.
         if: success() && env.AI_REVIEW_CONTENT != '' && (
               contains(env.AI_REVIEW_CONTENT, 'VULNERABILITY DETECTED:') ||
               contains(env.AI_REVIEW_CONTENT, 'MAJOR ISSUE:') ||
@@ -143,10 +101,11 @@ jobs:
             --body-file /tmp/github_issue_body.md \
             --label "ai-review,security,bug"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Ensure this secret is configured in your repo
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log if no issue created
-        # This step provides feedback if no critical issues were detected to create an issue.
+        # Only run if the previous step succeeded, AI review content exists,
+        # but it does NOT contain any critical issue keywords
         if: success() && env.AI_REVIEW_CONTENT != '' && !(
               contains(env.AI_REVIEW_CONTENT, 'VULNERABILITY DETECTED:') ||
               contains(env.AI_REVIEW_CONTENT, 'MAJOR ISSUE:') ||
