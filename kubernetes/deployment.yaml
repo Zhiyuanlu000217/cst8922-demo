@@ -5,7 +5,8 @@ metadata:
   labels:
     app: nodeapp
 spec:
-  replicas: 3 # Increased for high availability
+  replicas: 1 # Increased for high availability
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: nodeapp
