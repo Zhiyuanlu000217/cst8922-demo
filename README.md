@@ -216,3 +216,20 @@ Once the change is commmited, wait for a couple minutes, the change will applied
 
 ## Part 2: Copilot code review
 
+## Part 3: Copilot dependency review
+
+prompt
+```
+Create a GitHub Actions workflow that:
+
+Runs on pushes to the deprecate_deps branch.
+Installs Node.js 20 and project dependencies.
+Runs npm audit --json and saves the results.
+Generates a Markdown summary (audit-summary.md) that includes:
+A table of vulnerability counts by severity.
+A detailed table listing each affected dependency, its severity, installed version, and patched version (if available).
+Any advisories (for npm v6 format).
+If vulnerabilities are found, automatically creates a GitHub issue with the Markdown summary as the content, labeled dependencies, security, automated.
+At the end, prints a link to the created issue in the workflow output.
+The workflow should work for both npm v6 and v7+ audit JSON formats and produce a readable, pretty issue.
+```
