@@ -38,10 +38,22 @@ jobs:
               md += `| ${type} | ${count} |\n`;
             }
           }
+          // List affected dependencies for npm v7+ format
+          if (data.vulnerabilities && Object.keys(data.vulnerabilities).length > 0) {
+            md += `\n## Affected Dependencies\n`;
+            md += `| Package | Severity | Installed Version | Patched Version |\n|---------|----------|-------------------|-----------------|\n`;
+            for (const [pkg, vuln] of Object.entries(data.vulnerabilities)) {
+              if (vuln.via && vuln.via.length > 0 && vuln.severity !== 'none') {
+                let patched = vuln.fixAvailable && vuln.fixAvailable.name ? vuln.fixAvailable.version : 'None';
+                md += `| ${pkg} | ${vuln.severity} | ${vuln.installed} | ${patched} |\n`;
+              }
+            }
+          }
+          // List advisories for npm v6 format
           if (data.advisories && Object.keys(data.advisories).length > 0) {
             md += `\n## Advisories\n`;
             for (const [id, adv] of Object.entries(data.advisories)) {
-              md += `- **${adv.module_name}**: [${adv.title}](${adv.url}) (Severity: ${adv.severity})\n`;
+              md += `- **${adv.module_name}**: [${adv.title}](${adv.url}) (Severity: ${adv.severity}, Installed: ${adv.findings.map(f=>f.version).join(', ')})\n`;
             }
           }
           fs.writeFileSync('audit-summary.md', md);
