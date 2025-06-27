@@ -214,4 +214,13 @@ Now we have all those files, we can try to make change to the text in our static
 
 Once the change is commmited, wait for a couple minutes, the change will applied.
 
-## Part 5: Optimize the 
+## Part 5: Optimize the performance
+prompt 
+
+```
+Currently, my server's api/stress endpoint's performance is under my expectation, I wish you to optimize the function, and then create a new set of code, including new server, new Dockerfile, and new k8s deployment, do canary deployment, and then compare the performance by using proper command. If the fix is valid, proceed, otherwise rollback.
+
+The registry is "zeelu1", make sure you use current set in deployment.yml and Dockerfile.
+
+Note that make sure you replicate the set in Dockerfile
+``
