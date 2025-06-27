@@ -8,207 +8,89 @@ const PORT = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// --- CODE FOR SERVER-WIDE INSTABILITY (Optional, keep if you want it) ---
+// This middleware will run for every request
+app.use((req, res, next) => {
+  if (Math.random() < 0.05) { // 5% chance to crash
+    console.error('SERVER-WIDE INSTABILITY: Simulating a process crash for all endpoints!');
+    process.exit(1);
+  }
+
+  if (Math.random() < 0.10) { // 10% chance to introduce a global delay
+    const blockingDurationMs = Math.random() * 3000 + 1000;
+    console.warn(`SERVER-WIDE INSTABILITY: Simulating a global block for ${blockingDurationMs.toFixed(0)}ms.`);
+    const start = Date.now();
+    while (Date.now() - start < blockingDurationMs) { }
+    console.warn('SERVER-WIDE INSTABILITY: Global block finished. Resuming request processing.');
+  }
+
+  next();
+});
+// --- END SERVER-WIDE INSTABILITY CODE ---
+
+
 // Configure Express to serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Mock database for SQL injection demo
-const mockUsers = [
-  { id: 1, username: 'admin', email: 'admin@example.com', password: 'admin123', role: 'admin', created_at: '2024-01-01' },
-  { id: 2, username: 'john_doe', email: 'john@example.com', password: 'password123', role: 'user', created_at: '2024-01-02' },
-  { id: 3, username: 'jane_smith', email: 'jane@example.com', password: 'secret456', role: 'user', created_at: '2024-01-03' },
-  { id: 4, username: 'bob_wilson', email: 'bob@example.com', password: 'bobpass789', role: 'moderator', created_at: '2024-01-04' }
-];
 
-// SQL Injection Demo Endpoints
+// --- NEW FEATURE: /api/stress endpoint with O(n^2) inefficiency ---
 
-// VULNERABLE: Demonstrates SQL injection with SELECT * and string concatenation
-app.get('/api/users/vulnerable', (req, res) => {
-  const { username } = req.query;
-  
-  if (!username) {
-    return res.status(400).json({
-      error: 'Username parameter is required',
-      demo: 'This endpoint demonstrates SQL injection vulnerabilities',
-      example: 'Try: /api/users/vulnerable?username=admin OR 1=1--'
-    });
-  }
+/**
+ * Deliberately inefficient O(n^2) function to simulate a performance bottleneck.
+ * It simulates processing a list and finding duplicate pairs using nested loops.
+ * An optimized solution would typically use a Set or Map (O(n)).
+ */
+function processInefficiently(n) {
+  // Create a large array for processing
+  const largeArray = Array.from({ length: n }, (_, i) => i % (n / 10 || 1)); // Creates some duplicates
 
-  // VULNERABLE: String concatenation (simulating SQL injection)
-  // In real SQL: SELECT * FROM users WHERE username = 'admin' OR 1=1--'
-  const mockQuery = `SELECT * FROM users WHERE username = '${username}'`;
-  
-  // Simulate vulnerable query execution
-  let results = [];
-  try {
-    // This simulates what would happen with a real vulnerable query
-    if (username.includes("'") || username.includes('--') || username.includes('OR') || username.includes('1=1')) {
-      // Simulate SQL injection - return all users when injection is detected
-      results = mockUsers.map(user => ({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        password: user.password, // VULNERABLE: Exposing sensitive data
-        role: user.role,
-        created_at: user.created_at
-      }));
-    } else {
-      // Normal query
-      results = mockUsers.filter(user => user.username === username);
+  let pairCount = 0;
+  // This nested loop makes the complexity O(n^2)
+  for (let i = 0; i < largeArray.length; i++) {
+    for (let j = 0; j < largeArray.length; j++) {
+      if (i !== j && largeArray[i] === largeArray[j]) {
+        pairCount++; // Dummy operation to simulate work
+      }
     }
-    
-    res.json({
-      message: 'VULNERABLE: This endpoint demonstrates SQL injection risks',
-      query: mockQuery,
-      warning: 'This query uses SELECT * and string concatenation - VULNERABLE!',
-      results: results
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: 'Query execution failed',
-      query: mockQuery,
-      message: 'This simulates a real SQL injection vulnerability'
-    });
   }
-});
+  return pairCount;
+}
 
-// VULNERABLE: Login endpoint demonstrating SQL injection in authentication
-app.post('/api/login/vulnerable', (req, res) => {
-  const { username, password } = req.body;
-  
-  if (!username || !password) {
-    return res.status(400).json({
-      error: 'Username and password are required',
-      demo: 'This endpoint demonstrates SQL injection in login authentication',
-      example: 'Try with: username=admin&password=wrong OR 1=1--'
-    });
+// Endpoint to simulate high CPU usage due to inefficient algorithm
+app.get('/api/stress', (req, res) => {
+  const { n } = req.query; // Get 'n' from query parameter, e.g., /api/stress?n=10000
+
+  if (!n || isNaN(n) || n <= 0) {
+    return res.status(400).json({ error: 'Please provide a positive number "n" for array size (e.g., /api/stress?n=10000).' });
   }
 
-  // VULNERABLE: String concatenation in authentication query
-  // In real SQL: SELECT * FROM users WHERE username = 'admin' AND password = 'wrong OR 1=1--'
-  const mockQuery = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
-  
-  try {
-    // Simulate vulnerable authentication
-    let authenticatedUser = null;
-    let isInjection = false;
-    
-    // Check if this looks like an injection attempt
-    if (password.includes("'") || password.includes('--') || password.includes('OR') || password.includes('1=1')) {
-      isInjection = true;
-      // Simulate SQL injection bypassing authentication
-      authenticatedUser = mockUsers[0]; // Return first user (admin)
-    } else {
-      // Normal authentication check
-      authenticatedUser = mockUsers.find(user => 
-        user.username === username && user.password === password
-      );
-    }
-    
-    if (authenticatedUser) {
-      res.json({
-        message: isInjection ? 'VULNERABLE: SQL injection bypassed authentication!' : 'Login successful',
-        query: mockQuery,
-        warning: isInjection ? 'This query was vulnerable to SQL injection - VULNERABLE!' : 'Normal authentication',
-        user: {
-          id: authenticatedUser.id,
-          username: authenticatedUser.username,
-          email: authenticatedUser.email,
-          role: authenticatedUser.role,
-          password: authenticatedUser.password // VULNERABLE: Exposing password
-        }
-      });
-    } else {
-      res.status(401).json({
-        message: 'Login failed - Invalid credentials',
-        query: mockQuery,
-        suggestion: 'Try SQL injection: password=wrong OR 1=1--'
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      error: 'Authentication failed',
-      query: mockQuery,
-      message: 'This simulates a real SQL injection vulnerability in authentication'
-    });
-  }
-});
+  const arraySize = parseInt(n, 10);
+  console.log(`STRESS TEST: Processing array of size ${arraySize} using O(n^2) algorithm.`);
+  const startTime = process.hrtime.bigint(); // High-resolution time start
 
-// SECURE: Placeholder for secure endpoint (to be implemented later)
-app.get('/api/users/secure', (req, res) => {
+  const result = processInefficiently(arraySize); // This is the CPU-intensive part
+
+  const endTime = process.hrtime.bigint(); // High-resolution time end
+  const durationNs = endTime - startTime;
+  const durationMs = Number(durationNs) / 1_000_000;
+
+  console.log(`STRESS TEST: O(n^2) processing completed. Took ${durationMs.toFixed(2)}ms.`);
+
   res.json({
-    message: 'Secure endpoint - To be implemented',
-    note: 'This endpoint will demonstrate secure SQL practices in a future update'
+    status: 'success',
+    message: `Processed array of size ${arraySize} (O(n^2) simulation).`,
+    result: result,
+    calculation_time_ms: durationMs.toFixed(2),
+    note: 'This endpoint simulates high CPU load due to an inefficient O(n^2) algorithm. An O(n) optimization is possible.',
   });
 });
 
-// Demo endpoint to show the difference between vulnerable and secure approaches
-app.get('/api/sql-demo', (req, res) => {
-  res.json({
-    title: 'SQL Injection and Best Practices Demo',
-    description: 'This demo shows the difference between vulnerable and secure SQL practices',
-    endpoints: {
-      vulnerable: {
-        url: '/api/users/vulnerable?username=admin',
-        description: 'Demonstrates SQL injection vulnerabilities with SELECT * and string concatenation',
-        risks: [
-          'SQL injection attacks',
-          'Exposure of sensitive data',
-          'Unauthorized access to all records'
-        ]
-      },
-      login_vulnerable: {
-        url: '/api/login/vulnerable',
-        method: 'POST',
-        description: 'Demonstrates SQL injection in login authentication',
-        risks: [
-          'Authentication bypass',
-          'Unauthorized access',
-          'Password exposure'
-        ]
-      },
-      secure: {
-        url: '/api/users/secure?username=admin',
-        description: 'Demonstrates secure practices with parameterized queries and specific columns',
-        status: 'Coming soon - To be implemented'
-      }
-    },
-    test_cases: [
-      {
-        name: 'Normal Query',
-        vulnerable: '/api/users/vulnerable?username=admin',
-        secure: '/api/users/secure?username=admin'
-      },
-      {
-        name: 'SQL Injection Attempt',
-        vulnerable: '/api/users/vulnerable?username=admin OR 1=1--',
-        secure: '/api/users/secure?username=admin OR 1=1--'
-      },
-      {
-        name: 'Login Injection',
-        vulnerable: 'POST /api/login/vulnerable with password=wrong OR 1=1--',
-        secure: 'Coming soon'
-      }
-    ]
-  });
-});
+// --- END NEW FEATURE ---
 
-// Placeholder for future API endpoints that will be used in later demo stages:
-
-// @TODO: Future /api/unstable endpoint (for the health probe demo's deliberate instability)
-// app.get('/api/unstable', (req, res) => {
-//   // This endpoint will be deliberately unstable for health probe testing
-//   // in later demo stages
-// });
-
-// @TODO: Future /api/stress endpoint (for the high-concurrency/performance demo)
-// app.get('/api/stress', (req, res) => {
-//   // This endpoint will be used for stress testing and performance optimization
-//   // in later demo stages
-// });
 
 // Start the server
 app.listen(PORT, () => {
   console.log(`DevOps Demo App is running on http://localhost:${PORT}`);
   console.log(`Serving static files from: ${path.join(__dirname, 'public')}`);
-  console.log(`SQL Injection Demo available at: http://localhost:${PORT}/api/sql-demo`);
-}); 
+  console.log(`Stress Test endpoint available at: http://localhost:${PORT}/api/stress?n=10000`);
+});
