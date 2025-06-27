@@ -214,5 +214,4 @@ Now we have all those files, we can try to make change to the text in our static
 
 Once the change is commmited, wait for a couple minutes, the change will applied.
 
-## Part 2: Copilot code review
-
+## Part 5: Optimize the 

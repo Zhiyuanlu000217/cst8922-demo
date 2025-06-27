@@ -33,53 +33,55 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-// --- NEW FEATURE: /api/data-analysis endpoint ---
+// --- NEW FEATURE: /api/stress endpoint with O(n^2) inefficiency ---
 
 /**
- * Processes a collection of data to identify relationships or patterns.
- * This function performs computations on a list of items.
+ * Deliberately inefficient O(n^2) function to simulate a performance bottleneck.
+ * It simulates processing a list and finding duplicate pairs using nested loops.
+ * An optimized solution would typically use a Set or Map (O(n)).
  */
-function analyzeData(dataSize) {
-  // Create a dataset for processing
-  const dataset = Array.from({ length: dataSize }, (_, i) => i % (dataSize / 10 || 1)); // Creates some values that may appear multiple times
+function processInefficiently(n) {
+  // Create a large array for processing
+  const largeArray = Array.from({ length: n }, (_, i) => i % (n / 10 || 1)); // Creates some duplicates
 
-  let relevantCount = 0;
-  // Iterate through the dataset to perform calculations
-  for (let i = 0; i < dataset.length; i++) {
-    for (let j = 0; j < dataset.length; j++) {
-      if (i !== j && dataset[i] === dataset[j]) {
-        relevantCount++; // Accumulate based on certain conditions
+  let pairCount = 0;
+  // This nested loop makes the complexity O(n^2)
+  for (let i = 0; i < largeArray.length; i++) {
+    for (let j = 0; j < largeArray.length; j++) {
+      if (i !== j && largeArray[i] === largeArray[j]) {
+        pairCount++; // Dummy operation to simulate work
       }
     }
   }
-  return relevantCount;
+  return pairCount;
 }
 
-// Endpoint for data analysis processing
-app.get('/api/data-analysis', (req, res) => {
-  const { size } = req.query; // Get 'size' from query parameter, e.g., /api/data-analysis?size=10000
+// Endpoint to simulate high CPU usage due to inefficient algorithm
+app.get('/api/stress', (req, res) => {
+  const { n } = req.query; // Get 'n' from query parameter, e.g., /api/stress?n=10000
 
-  if (!size || isNaN(size) || size <= 0) {
-    return res.status(400).json({ error: 'Please provide a positive number "size" for dataset processing (e.g., /api/data-analysis?size=10000).' });
+  if (!n || isNaN(n) || n <= 0) {
+    return res.status(400).json({ error: 'Please provide a positive number "n" for array size (e.g., /api/stress?n=10000).' });
   }
 
-  const datasetSize = parseInt(size, 10);
-  console.log(`DATA ANALYSIS: Processing dataset of size ${datasetSize}.`);
+  const arraySize = parseInt(n, 10);
+  console.log(`STRESS TEST: Processing array of size ${arraySize} using O(n^2) algorithm.`);
   const startTime = process.hrtime.bigint(); // High-resolution time start
 
-  const result = analyzeData(datasetSize); // Perform the data analysis
+  const result = processInefficiently(arraySize); // This is the CPU-intensive part
 
   const endTime = process.hrtime.bigint(); // High-resolution time end
   const durationNs = endTime - startTime;
   const durationMs = Number(durationNs) / 1_000_000;
 
-  console.log(`DATA ANALYSIS: Processing completed. Took ${durationMs.toFixed(2)}ms.`);
+  console.log(`STRESS TEST: O(n^2) processing completed. Took ${durationMs.toFixed(2)}ms.`);
 
   res.json({
     status: 'success',
-    message: `Processed dataset of size ${datasetSize}.`,
+    message: `Processed array of size ${arraySize} (O(n^2) simulation).`,
     result: result,
-    processing_time_ms: durationMs.toFixed(2),
+    calculation_time_ms: durationMs.toFixed(2),
+    note: 'This endpoint simulates high CPU load due to an inefficient O(n^2) algorithm. An O(n) optimization is possible.',
   });
 });
 
@@ -90,5 +92,5 @@ app.get('/api/data-analysis', (req, res) => {
 app.listen(PORT, () => {
   console.log(`DevOps Demo App is running on http://localhost:${PORT}`);
   console.log(`Serving static files from: ${path.join(__dirname, 'public')}`);
-  console.log(`Data Analysis endpoint available at: http://localhost:${PORT}/api/data-analysis?size=10000`);
+  console.log(`Stress Test endpoint available at: http://localhost:${PORT}/api/stress?n=10000`);
 });
