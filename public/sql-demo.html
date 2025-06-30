@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Injection Demo - DevOps Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .demo-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+        }
+
+        .endpoint-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .endpoint-card {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .endpoint-card.vulnerable {
+            border-color: #e74c3c;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+        }
+
+        .endpoint-card.secure {
+            border-color: #27ae60;
+            background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%);
+        }
+
+        .endpoint-card.placeholder {
+            border-color: #95a5a6;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .endpoint-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .endpoint-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .endpoint-title.vulnerable {
+            color: #e74c3c;
+        }
+
+        .endpoint-title.secure {
+            color: #27ae60;
+        }
+
+        .endpoint-title.placeholder {
+            color: #95a5a6;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-badge.vulnerable {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .status-badge.secure {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .status-badge.placeholder {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .result-area {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            min-height: 100px;
+        }
+
+        .result-area.loading {
+            background-color: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .result-area.error {
+            background-color: #f8d7da;
+            border-left-color: #e74c3c;
+        }
+
+        .result-area.success {
+            background-color: #d4edda;
+            border-left-color: #27ae60;
+        }
+
+        .predefined-attacks {
+            margin-top: 20px;
+        }
+
+        .attack-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .attack-btn {
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .attack-btn:hover {
+            background-color: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .login-section {
+            margin-top: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+            border-radius: 10px;
+            border: 2px solid #e74c3c;
+        }
+
+        .login-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .login-attempt {
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            border: 2px solid #e74c3c;
+        }
+
+        .login-attempt h4 {
+            color: #e74c3c;
+            margin-bottom: 15px;
+        }
+
+        .comparison-section {
+            margin-top: 40px;
+            padding: 30px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .comparison-item {
+            padding: 20px;
+            border-radius: 8px;
+            background-color: white;
+        }
+
+        .comparison-item h4 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .comparison-item ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .comparison-item li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .comparison-item li:before {
+            content: "•";
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .comparison-item.vulnerable li:before {
+            color: #e74c3c;
+        }
+
+        .comparison-item.secure li:before {
+            color: #27ae60;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #2980b9;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .endpoint-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .login-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 SQL Injection Demo</h1>
+            <p>Learn about SQL injection vulnerabilities and secure coding practices</p>
+        </div>
+
+        <div class="content">
+            <div class="demo-section">
+                <h2 class="section-title">Test SQL Injection Vulnerabilities</h2>
+                <p style="margin-bottom: 30px; color: #666;">
+                    This demo shows SQL injection vulnerabilities. Try normal queries and SQL injection attempts to see how the vulnerable endpoint responds.
+                </p>
+
+                <div class="endpoint-grid">
+                    <!-- Vulnerable Endpoint -->
+                    <div class="endpoint-card vulnerable">
+                        <h3 class="endpoint-title vulnerable">
+                            <span class="status-badge vulnerable">Vulnerable</span>
+                            Vulnerable Endpoint
+                        </h3>
+                        <p style="margin-bottom: 20px; color: #666;">
+                            Uses SELECT * and string concatenation - demonstrates SQL injection risks
+                        </p>
+                        
+                        <div class="input-group">
+                            <label for="vulnerable-username">Username:</label>
+                            <input type="text" id="vulnerable-username" placeholder="Enter username (e.g., admin)" value="admin">
+                        </div>
+                        
+                        <button class="btn btn-danger" onclick="testVulnerableEndpoint()">Test Vulnerable Query</button>
+                        
+                        <div class="predefined-attacks">
+                            <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Try these SQL injection attacks:</p>
+                            <div class="attack-buttons">
+                                <button class="attack-btn" onclick="setAttack('admin OR 1=1--')">OR 1=1</button>
+                                <button class="attack-btn" onclick="setAttack('admin\' UNION SELECT * FROM users--')">UNION Attack</button>
+                                <button class="attack-btn" onclick="setAttack('admin\'; DROP TABLE users--')">DROP TABLE</button>
+                                <button class="attack-btn" onclick="setAttack('admin\' OR \'1\'=\'1')">OR '1'='1</button>
+                            </div>
+                        </div>
+                        
+                        <div id="vulnerable-result" class="result-area">
+                            <p style="color: #666; text-align: center;">Click "Test Vulnerable Query" to see results</p>
+                        </div>
+                    </div>
+
+                    <!-- Secure Endpoint (Placeholder) -->
+                    <div class="endpoint-card placeholder">
+                        <h3 class="endpoint-title placeholder">
+                            <span class="status-badge placeholder">Coming Soon</span>
+                            Secure Endpoint
+                        </h3>
+                        <p style="margin-bottom: 20px; color: #666;">
+                            This endpoint will demonstrate secure practices with parameterized queries and specific columns
+                        </p>
+                        
+                        <div class="input-group">
+                            <label for="secure-username">Username:</label>
+                            <input type="text" id="secure-username" placeholder="To be implemented" disabled>
+                        </div>
+                        
+                        <button class="btn btn-secondary" disabled>Coming Soon</button>
+                        
+                        <div id="secure-result" class="result-area">
+                            <p style="color: #666; text-align: center;">This endpoint will be implemented in a future update</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login Injection Demo -->
+            <div class="login-section">
+                <h2 class="section-title">🔐 Login Authentication Injection Demo</h2>
+                <p style="margin-bottom: 20px; color: #666;">
+                    This demo shows how SQL injection can bypass login authentication. Try logging in with wrong credentials, then use SQL injection to bypass the authentication.
+                </p>
+
+                <div class="login-form">
+                    <!-- Normal Login Attempt -->
+                    <div class="login-attempt">
+                        <h4>❌ Normal Login (Will Fail)</h4>
+                        <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                            Try logging in with wrong credentials
+                        </p>
+                        
+                        <div class="input-group">
+                            <label for="normal-username">Username:</label>
+                            <input type="text" id="normal-username" value="admin">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="normal-password">Password:</label>
+                            <input type="password" id="normal-password" value="wrongpassword">
+                        </div>
+                        
+                        <button class="btn btn-danger" onclick="testNormalLogin()">Try Normal Login</button>
+                        
+                        <div id="normal-login-result" class="result-area">
+                            <p style="color: #666; text-align: center;">Click "Try Normal Login" to see results</p>
+                        </div>
+                    </div>
+
+                    <!-- Injection Login Attempt -->
+                    <div class="login-attempt">
+                        <h4>✅ SQL Injection Login (Will Succeed)</h4>
+                        <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                            Use SQL injection to bypass authentication
+                        </p>
+                        
+                        <div class="input-group">
+                            <label for="injection-username">Username:</label>
+                            <input type="text" id="injection-username" value="admin">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="injection-password">Password:</label>
+                            <input type="text" id="injection-password" value="wrong' OR 1=1--">
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="testInjectionLogin()">Try Injection Login</button>
+                        
+                        <div class="predefined-attacks">
+                            <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Try these injection passwords:</p>
+                            <div class="attack-buttons">
+                                <button class="attack-btn" onclick="setInjectionPassword('wrong\' OR 1=1--')">OR 1=1</button>
+                                <button class="attack-btn" onclick="setInjectionPassword('wrong\' OR \'1\'=\'1')">OR '1'='1'</button>
+                                <button class="attack-btn" onclick="setInjectionPassword('wrong\' --')">Comment Out</button>
+                                <button class="attack-btn" onclick="setInjectionPassword('wrong\' OR 1=1#')">Hash Comment</button>
+                            </div>
+                        </div>
+                        
+                        <div id="injection-login-result" class="result-area">
+                            <p style="color: #666; text-align: center;">Click "Try Injection Login" to see results</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="/" class="back-link">← Back to Main Page</a>
+        </div>
+    </div>
+
+    <script>
+        function setAttack(attack) {
+            document.getElementById('vulnerable-username').value = attack;
+        }
+
+        function setInjectionPassword(password) {
+            document.getElementById('injection-password').value = password;
+        }
+
+        async function testVulnerableEndpoint() {
+            const username = document.getElementById('vulnerable-username').value;
+            const resultDiv = document.getElementById('vulnerable-result');
+            
+            if (!username) {
+                resultDiv.innerHTML = '<p style="color: #e74c3c;">Please enter a username</p>';
+                return;
+            }
+
+            resultDiv.className = 'result-area loading';
+            resultDiv.innerHTML = '<div class="loading-spinner"></div> Testing vulnerable endpoint...';
+
+            try {
+                const response = await fetch(`/api/users/vulnerable?username=${encodeURIComponent(username)}`);
+                const data = await response.json();
+                
+                resultDiv.className = 'result-area';
+                resultDiv.innerHTML = `
+                    <h4 style="color: #e74c3c; margin-bottom: 15px;">⚠️ VULNERABLE ENDPOINT RESULTS</h4>
+                    <p><strong>Query:</strong> <code>${data.query || 'N/A'}</code></p>
+                    <p><strong>Results Found:</strong> ${data.results ? data.results.length : 0} users</p>
+                    ${data.results && data.results.length > 0 ? `
+                        <div style="margin-top: 15px;">
+                            <strong>Exposed Data:</strong>
+                            <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 10px;">${JSON.stringify(data.results, null, 2)}</pre>
+                        </div>
+                    ` : ''}
+                `;
+            } catch (error) {
+                resultDiv.className = 'result-area error';
+                resultDiv.innerHTML = `<p style="color: #e74c3c;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testNormalLogin() {
+            const username = document.getElementById('normal-username').value;
+            const password = document.getElementById('normal-password').value;
+            const resultDiv = document.getElementById('normal-login-result');
+            
+            if (!username || !password) {
+                resultDiv.innerHTML = '<p style="color: #e74c3c;">Please enter both username and password</p>';
+                return;
+            }
+
+            resultDiv.className = 'result-area loading';
+            resultDiv.innerHTML = '<div class="loading-spinner"></div> Attempting normal login...';
+
+            try {
+                const response = await fetch('/api/login/vulnerable', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    resultDiv.className = 'result-area error';
+                    resultDiv.innerHTML = `<p style="color: #e74c3c;"><b>Error:</b> Unexpected server response. The server may have sent an HTML error page instead of the expected JSON format.</p>`;
+                    return;
+                }
+                
+                if (response.ok) {
+                    resultDiv.className = 'result-area success';
+                    resultDiv.innerHTML = `
+                        <h4 style="color: #27ae60; margin-bottom: 15px;">✅ LOGIN SUCCESSFUL</h4>
+                        <p><strong>Query:</strong> <code>${data.query || 'N/A'}</code></p>
+                        <p><strong>User:</strong> ${data.user ? data.user.username : 'N/A'}</p>
+                        <p><strong>Role:</strong> ${data.user ? data.user.role : 'N/A'}</p>
+                    `;
+                } else {
+                    resultDiv.className = 'result-area error';
+                    resultDiv.innerHTML = `
+                        <h4 style="color: #e74c3c; margin-bottom: 15px;">❌ LOGIN FAILED</h4>
+                        <p><strong>Message:</strong> ${data.message || 'Authentication failed'}</p>
+                        <p><strong>Query:</strong> <code>${data.query || 'N/A'}</code></p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result-area error';
+                resultDiv.innerHTML = `<p style="color: #e74c3c;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testInjectionLogin() {
+            const username = document.getElementById('injection-username').value;
+            const password = document.getElementById('injection-password').value;
+            const resultDiv = document.getElementById('injection-login-result');
+            
+            if (!username || !password) {
+                resultDiv.innerHTML = '<p style="color: #e74c3c;">Please enter both username and password</p>';
+                return;
+            }
+
+            resultDiv.className = 'result-area loading';
+            resultDiv.innerHTML = '<div class="loading-spinner"></div> Attempting injection login...';
+
+            try {
+                const response = await fetch('/api/login/vulnerable', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    resultDiv.className = 'result-area error';
+                    resultDiv.innerHTML = `<p style="color: #e74c3c;"><b>Error:</b> Unexpected server response. The server may have sent an HTML error page instead of the expected JSON format.</p>`;
+                    return;
+                }
+                
+                if (response.ok) {
+                    resultDiv.className = 'result-area success';
+                    resultDiv.innerHTML = `
+                        <h4 style="color: #27ae60; margin-bottom: 15px;">✅ INJECTION LOGIN SUCCESSFUL!</h4>
+                        <p><strong>Query:</strong> <code>${data.query || 'N/A'}</code></p>
+                        <p><strong>User:</strong> ${data.user ? data.user.username : 'N/A'}</p>
+                        <p><strong>Role:</strong> ${data.user ? data.user.role : 'N/A'}</p>
+                        <p><strong>Password:</strong> ${data.user ? data.user.password : 'N/A'} (exposed!)</p>
+                        <div style="margin-top: 15px; background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
+                            <strong>⚠️ WARNING:</strong> This demonstrates a critical security vulnerability where SQL injection can bypass authentication entirely!
+                        </div>
+                    `;
+                } else {
+                    resultDiv.className = 'result-area error';
+                    resultDiv.innerHTML = `
+                        <h4 style="color: #e74c3c; margin-bottom: 15px;">❌ INJECTION FAILED</h4>
+                        <p><strong>Message:</strong> ${data.message || 'Authentication failed'}</p>
+                        <p><strong>Query:</strong> <code>${data.query || 'N/A'}</code></p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result-area error';
+                resultDiv.innerHTML = `<p style="color: #e74c3c;">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                testVulnerableEndpoint();
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

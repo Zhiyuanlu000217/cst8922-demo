@@ -1,0 +1,118 @@
+name: AI Code Review for Changed Code (Inline)
+
+on:
+  push:
+    branches:
+      - test_branch
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ai-review-and-create-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get changed code diff
+        id: get_diff
+        run: |
+          # Use grep -v to exclude the node_modules directory
+          DIFF_CONTENT=$(git diff HEAD~1 HEAD -- "*.js" "*.html" | grep -v 'node_modules')
+          
+          # Store multi-line diff content in an environment variable
+          # using a delimiter (EOF) to handle newlines correctly
+          echo "DIFF_CONTENT<<EOF" >> $GITHUB_ENV
+          echo "$DIFF_CONTENT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Call OpenAI API for Code Review
+        id: openai_review
+        # Only run if there is actual diff content
+        if: env.DIFF_CONTENT != ''
+        run: |
+          PROMPT="You are an expert software security and quality reviewer. Review the following code changes (Git diff format) for a Node.js application. Focus on: 1. Security vulnerabilities (SQL injection, insecure configurations, exposed secrets, or other common web vulnerabilities). 2. Coding best practices (anti-patterns or significant quality issues). 3. Readability and Maintainability (suggest improvements for clarity). If you find any specific, actionable security vulnerabilities or major quality issues, clearly state them. If a critical security vulnerability (like SQL Injection) or a significant bug is found, start your response with 'VULNERABILITY DETECTED:' or 'MAJOR ISSUE:' followed by a concise description and suggested fix. Otherwise, provide general review comments or confirm if no significant issues are found. Provide concise, actionable feedback. If suggesting a fix, provide code examples if possible. Changed code (Git Diff):"
+          
+          # Construct JSON payload for OpenAI API
+          JSON_PAYLOAD=$(jq -n \
+            --arg prompt "$PROMPT" \
+            --arg diff "$DIFF_CONTENT" \
+            '{
+              model: "gpt-4o",
+              messages: [
+                { "role": "system", "content": $prompt },
+                { "role": "user", "content": $diff }
+              ]
+            }'
+          )
+          
+          # Call OpenAI API and extract the content of the AI's message
+          AI_REVIEW=$(curl -sS -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.OPENAI_KEY }}" \
+            -d "$JSON_PAYLOAD" \
+            https://api.openai.com/v1/chat/completions | jq -r '.choices[0].message.content')
+
+          # Store multi-line AI review content in an environment variable
+          echo "AI_REVIEW_CONTENT<<EOF" >> $GITHUB_ENV
+          echo "$AI_REVIEW" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "AI Review Generated."
+
+      - name: Write AI review content to file
+        if: env.AI_REVIEW_CONTENT != ''
+        run: |
+          printf "%s" "${{ env.AI_REVIEW_CONTENT }}" > /tmp/github_ai_review_content.md
+
+      - name: Write full issue body to file
+        if: env.AI_REVIEW_CONTENT != ''
+        run: |
+          {
+            echo "An automated AI review has detected potential issues in the recent push to the \`anti-pattern-example\` branch."
+            echo
+            echo "**Commit SHA:** \`${{ github.sha }}\`"
+            echo
+            echo "**AI Review Output:**"
+            echo '```'
+            cat /tmp/github_ai_review_content.md
+            echo '```'
+            echo
+            echo "Please review the suggested findings and take appropriate action."
+          } > /tmp/github_issue_body.md
+
+      - name: Create GitHub Issue based on AI Review
+        if: success() && env.AI_REVIEW_CONTENT != '' && (
+              contains(env.AI_REVIEW_CONTENT, 'VULNERABILITY DETECTED:') ||
+              contains(env.AI_REVIEW_CONTENT, 'MAJOR ISSUE:') ||
+              contains(env.AI_REVIEW_CONTENT, 'SECURITY RISK:') ||
+              contains(env.AI_REVIEW_CONTENT, 'POTENTIAL BUG:') ||
+              contains(env.AI_REVIEW_CONTENT, 'SQL Injection')
+            )
+        run: |
+          COMMIT_SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          ISSUE_TITLE="AI Review Alert: Potential Issue in Recent Push (${COMMIT_SHA_SHORT})"
+          gh issue create \
+            --title "$ISSUE_TITLE" \
+            --body-file /tmp/github_issue_body.md \
+            --label "ai-review,security,bug"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log if no issue created
+        # Only run if the previous step succeeded, AI review content exists,
+        # but it does NOT contain any critical issue keywords
+        if: success() && env.AI_REVIEW_CONTENT != '' && !(
+              contains(env.AI_REVIEW_CONTENT, 'VULNERABILITY DETECTED:') ||
+              contains(env.AI_REVIEW_CONTENT, 'MAJOR ISSUE:') ||
+              contains(env.AI_REVIEW_CONTENT, 'SECURITY RISK:') ||
+              contains(env.AI_REVIEW_CONTENT, 'POTENTIAL BUG:') ||
+              contains(env.AI_REVIEW_CONTENT, 'SQL Injection')
+            )
+        run: |
+          echo "AI review did not detect critical issues warranting an automatic GitHub Issue."
+          echo "Full AI review output (for debugging/info):"
+          echo "${{ env.AI_REVIEW_CONTENT }}"
