@@ -13,6 +13,10 @@ app.get('/health', (req, res) => {
 // Serve a simple text response at the root path '/'
 app.get('/', (req, res) => {
   console.log('Root endpoint hit. Server is responding.');
+  if (Math.random() < 0.5) { // 95% chance to exit immediately upon successful listen
+    console.error('SERVER STARTUP INSTABILITY: Simulating a critical failure during initialization. Exiting!');
+    process.exit(1); // Exit with a non-zero code to indicate an error
+  }
   res.status(200).send('Welcome to the DevOps Demo App! This is a simple text response.');
 });
 
