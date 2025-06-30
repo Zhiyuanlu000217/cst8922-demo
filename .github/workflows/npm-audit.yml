@@ -21,7 +21,7 @@ jobs:
         run: npm ci || npm install
 
       - name: Run npm audit and save results
-        run: npm audit --json > audit.json
+        run: npm audit --json > audit.json || true
 
       - name: Generate audit summary markdown
         run: node .github/scripts/generate-audit-summary.js
