@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probe_example
+  labels:
+    app: probe_example
+spec:
+  replicas: 1 # Increased for high availability
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: probe_example
+  template:
+    metadata:
+      labels:
+        app: probe_example
+    spec:
+      containers:
+        - name: probe_example
+          image: zeelu1/cst8922-demo-part4:latest 
+          ports:
+            - containerPort: 3000
+          # livenessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 3000
+          #   initialDelaySeconds: 10
+          #   periodSeconds: 10
+          #   timeoutSeconds: 3
+          #   failureThreshold: 3
+          # readinessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 3000
+          #   initialDelaySeconds: 5
+          #   periodSeconds: 5
+          #   timeoutSeconds: 2
+          #   failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodeapp-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: nodeapp
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000

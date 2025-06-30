@@ -1,19 +1,12 @@
-# Step 3: Copilot dependency review
+# Step 4: Copilot fixes missing probe
 
-In this part, we will see how to use prompt to create a pipeline to detect deprecated dependencies(In our case, nodejs dependencies). The provided package.json contains a deprecated dependency `loadash`, which will be captured by the github actions pipeline. The created pipeline will not contained until demo. If you wish to see the result, please to go my [working repo](https://github.com/Zhiyuanlu000217/cst8922-demo/tree/deprecate_deps)
+In this part, we have a server that has 50% probability to quit/deplay upon server starts. We will ask copilot to modify our deployment file and server to include probes.
 
 prompt
 ```
-Create a GitHub Actions workflow that:
-
-Runs on pushes to the deprecate_deps branch.
-Installs Node.js 20 and project dependencies.
-Runs npm audit --json and saves the results.
-Generates a Markdown summary (audit-summary.md) that includes:
-A table of vulnerability counts by severity.
-A detailed table listing each affected dependency, its severity, installed version, and patched version (if available).
-Any advisories (for npm v6 format).
-If vulnerabilities are found, automatically creates a GitHub issue with the Markdown summary as the content, labeled dependencies, security, automated.
-At the end, prints a link to the created issue in the workflow output.
-The workflow should work for both npm v6 and v7+ audit JSON formats and produce a readable, pretty issue.
+Our server deployment is currently exhibiting critical performance issues, specifically experiencing inconsistent and unpredictable periods of complete unresponsiveness (appearing offline) leading to frequent container restarts, alongside significant and intermittent delays in processing requests, often resulting in timeouts. This degraded availability and high latency are severely impacting user experience and causing our health probes to consistently fail, indicating underlying inefficiencies or resource bottlenecks in the current deployment configuration.
+```
+prompt_2
+```
+I noticed you add liveness probe, please modify my server code to align with the probes, and do not change any existing logic.
 ```
