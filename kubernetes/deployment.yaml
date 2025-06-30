@@ -1,42 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nodeapp-deployment
-  labels:
-    app: nodeapp
+  name: cst8922-demo
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nodeapp
+      app: cst8922-demo
   template:
     metadata:
       labels:
-        app: nodeapp
+        app: cst8922-demo
     spec:
       containers:
-        - name: nodeapp
-          image: zeelu1/cst8922-demo:latest 
+        - name: cst8922-demo
+          image: zeelu1/cst8922-demo:latest # Placeholder, replaced by CI/CD pipeline
           ports:
             - containerPort: 3000
-          # livenessProbe: 
-          # readinessProbe: 
-          # resources: 
-          #   requests:
-          #     memory: "128Mi"
-          #     cpu: "250m"
-          #   limits:
-          #     memory: "256Mi"
-          #     cpu: "500m"
+          # livenessProbe: # TODO: Add liveness probe
+          # readinessProbe: # TODO: Add readiness probe
+          # resources: # TODO: Add resource requests and limits (CPU, Memory)
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: nodeapp-service
+  name: cst8922-demo-service
 spec:
   type: LoadBalancer
   selector:
-    app: nodeapp
+    app: cst8922-demo
   ports:
     - name: http
       port: 80
