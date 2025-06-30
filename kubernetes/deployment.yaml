@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: probe-example
-          image: zeelu1/cst8922-demo-part4:latest 
+          image: zeelu1/cst8922-demo-part4:latest
           ports:
             - containerPort: 3000
           livenessProbe:

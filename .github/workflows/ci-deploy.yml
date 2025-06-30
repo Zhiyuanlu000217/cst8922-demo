@@ -66,9 +66,5 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - name: Update image tag in deployment manifest
-        run: |
-          sed -i.bak '/image:/s|image:.*|image: '"$DOCKER_IMAGE_REPO:$IMAGE_TAG"'|' kubernetes/deployment.yaml
-
       - name: Apply Kubernetes manifests
         run: kubectl apply -f kubernetes/deployment.yaml
