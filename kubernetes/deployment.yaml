@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: probe_example
+  name: probe-example
   labels:
-    app: probe_example
+    app: probe-example
 spec:
   replicas: 1 # Increased for high availability
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: probe_example
+      app: probe-example
   template:
     metadata:
       labels:
-        app: probe_example
+        app: probe-example
     spec:
       containers:
-        - name: probe_example
+        - name: probe-example
           image: zeelu1/cst8922-demo-part4:latest 
           ports:
             - containerPort: 3000
